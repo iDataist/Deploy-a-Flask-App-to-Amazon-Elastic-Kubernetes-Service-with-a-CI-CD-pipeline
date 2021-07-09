@@ -219,88 +219,52 @@ To try the /auth endpoint, use the following command, replacing email/password a
 
         You can check its status in the CloudFormation console. It will take some time (5-15 mins) to create the stack. After the successful creation of the stack, you can see the CodeBuild project and CodePipeline instance get automatically created for you. In addition, the Cloudformation template will create a few more resources, such as an S3 bucket, a Lambda function, and others.
 
-Create stack - Step 1 - Specify template
-
-Create stack - Step 2 - Specify stack details
-
-Final stack in the CloudFormation console
 3. Set a Secret using AWS Parameter Store
 
-We need a way to pass your JWT secret to the app in kubernetes securly. You will be using AWS Parameter Store to do this.
+    We need a way to pass your JWT secret to the app in kubernetes securly. You will be using AWS Parameter Store to do this.
 
-    Add the following to the end of the buildspec.yml file (be careful about the indentation):
-
+    Add the following to the end of the buildspec.yml file (be careful about the indentation). This lets CodeBuild know to set an environment variable based on a value in the parameter-store. 
+    ```
     env:
-      parameter-store:         
+        parameter-store:         
         JWT_SECRET: JWT_SECRET
-
-    This lets CodeBuild know to set an environment variable based on a value in the parameter-store. See a snapshot below:
-
-Add env section at the end of buildspec.yml
-
+    ```
     Put secret into AWS Parameter Store
-
+    ```
     aws ssm put-parameter --name JWT_SECRET --overwrite --value "YourJWTSecret" --type SecureString
-
-    Once you submit your project and receive the reviews, you can consider deleting the variable from parameter-store using:
-
+    ```
+    You can delete the variable from parameter-store using:
+    ```
     aws ssm delete-parameter --name JWT_SECRET
+    ```
+4. CodeBuild
+    In the previous step, the CloudFormation template file, ci-cd-codepipeline.cfn.yml, will automatically create a CodeBuild project. By default, the build process depends on the buildspec.yml file.
 
-4. How the CodeBuild project will work?
-
-In the previous step, the CloudFormation template file, ci-cd-codepipeline.cfn.yml, will automatically create a CodeBuild project. By default, the build process depends on the buildspec.yml file.
-
-    buildspec.yml
-    The CodeBuild expects the build specification in a file named buildspec.yml (default name) to run a build. This file must be placed in the root of your source directory (Github repo). The buildspec.yml is a collection of build commands and related settings, in YAML format.
+    - buildspec.yml: The CodeBuild expects the build specification in a file named buildspec.yml (default name) to run a build. This file must be placed in the root of your source directory (Github repo). The buildspec.yml is a collection of build commands and related settings, in YAML format.
 
         Note - In the buildspec.yml file, use the same (or closer) KUBECTL version as you've used while creating an EKS cluster (run kubectl version in your local terminal). To do so, uncomment and replace this line in the buildspec.yml with a specific version of your choice. Refer to the Install kubectl on Linux worker nodes for the available versions. (Mind the region in your URL too).
 
-    Details of the buildspec.yml
-    The buildspec.yml file specifies the different phases of a build, such as an install, pre-build, build, and post-build. Each phase has a set of commands to be automatically executed by CodeBuild. When you trigger a build in the CodeBuild, you can see each command being executed in the CodeBuild log console.
+    - Details of the buildspec.yml: The buildspec.yml file specifies the different phases of a build, such as an install, pre-build, build, and post-build. Each phase has a set of commands to be automatically executed by CodeBuild. When you trigger a build in the CodeBuild, you can see each command being executed in the CodeBuild log console.
 
-Build phases defined in the buildspec.yml
+    - Trigger: Start the build process by clicking on the “Start build” button in the CodeBuild dashboard.
 
-    Trigger
-    Start the build process by clicking on the “Start build” button in the CodeBuild dashboard.
-
-Snapshot to show the “Start build” button in CodeBuild
-
-Snapshot to show the build in progress
-5. Troubleshoot - How to debug a failed build?
-6. The Working Project
-
-Once the stack is successfully created, try the steps below:
-
-    Push a commit - To check if the pipeline works, commit a change to the master branch of your Github repo, as:
-
-    # Verify the remote destination. 
-    # It should point to the repo in your account (not the repo in the Udacity account). 
-    git remote -v
-    # Otherwise, FORK the Udacity repo, and then clone it locally
-    # Make the changes locally
-    # git status
-    # Add the changes to the Git staging area
-    git add . --all
-    # You can select specific files to be added to the staging area as
-    git add <filename>
-    # Provide a meaningful description of the changes you have added to the staging area
+5. Test the stack and API endpoints.
+    To check if the pipeline works, commit a change to the master branch of your Github repo. In the AWS console go to the CodePipeline dashboard. You should see that the build is running.
+    ```
+    git add .
     git commit -m “my comment“
-    # Push to the local master branch to the remote master branch
     git push
+    ```
 
-    Verify - In the AWS console go to the CodePipeline dashboard. You should see that the build is running.
+    To test your API endpoints, get the external IP for your service by running `kubectl get services simple-jwt-api -o wide`.
 
-    Test your Endpoint - To test your API endpoints, get the external IP for your service:
-
-    kubectl get services simple-jwt-api -o wide
-
-    Now use the external IP url to test the app:
-
+    Use the external IP url to test the app:
+    ```
     export TOKEN=`curl -d '{"email":"<EMAIL>","password":"<PASSWORD>"}' -H "Content-Type: application/json" -X POST <EXTERNAL-IP URL>/auth  | jq -r '.token'`
+
     curl --request GET '<EXTERNAL-IP URL>/contents' -H "Authorization: Bearer ${TOKEN}" | jq 
+    ```
 
-    Save the external IP from above to provide to the reviewer when you will submit your project. Go to the next page for details about the project submission process.
 
-Concept Checklist
 
 
