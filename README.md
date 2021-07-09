@@ -151,43 +151,43 @@ To try the /auth endpoint, use the following command, replacing email/password a
     - Verify the newly created role in the IAM service
 3. Allowing the new role access to the cluster: Before you assign the new-role to the CodeBuild service (so that CodeBuild can also administer the cluster) you will have to add an entry of this new role into the 'aws-auth ConfigMap'. The aws-auth ConfigMap is used to grant role-based access control to your cluster. When your cluster is first created, the user who created it is given sole permission to administer it. Therefore, to grant any AWS service/user who will assume this role the ability to interact with your cluster, you must edit the 'aws-auth ConfigMap' within Kubernetes.
 
-- Fetch: Get the current configmap and save it to a file:
-    ```
-    # Mac/Linux
-    # The file will be created at `/System/Volumes/Data/private/tmp/aws-auth-patch.yml` path
+    - Fetch: Get the current configmap and save it to a file:
+        ```
+        # Mac/Linux
+        # The file will be created at `/System/Volumes/Data/private/tmp/aws-auth-patch.yml` path
 
-    kubectl get -n kube-system configmap/aws-auth -o yaml > /tmp/aws-auth-patch.yml
+        kubectl get -n kube-system configmap/aws-auth -o yaml > /tmp/aws-auth-patch.yml
 
-    # Windows 
-    # The file will be created in the current working directory
+        # Windows 
+        # The file will be created in the current working directory
 
-    kubectl get -n kube-system configmap/aws-auth -o yaml > aws-auth-patch.yml
-    ```
-- Edit: Open the aws-auth-patch.yml file using any editor, such as VS code editor:
-    ```
-    # Mac/Linux
-    code /System/Volumes/Data/private/tmp/aws-auth-patch.yml
-    # Windows
-    code aws-auth-patch.yml
-    ```
-    Add the following group in the data → mapRoles section of this file. YAML is indentation-sensitive, therefore refer to the snapshot below for a correct indentation:
-    ```
-    mapRoles: |
-        - groups:
-        - system:masters
-        rolearn: arn:aws:iam::<ACCOUNT_ID>:role/UdacityFlaskDeployCBKubectlRole
-        username: build      
-    ```
+        kubectl get -n kube-system configmap/aws-auth -o yaml > aws-auth-patch.yml
+        ```
+    - Edit: Open the aws-auth-patch.yml file using any editor, such as VS code editor:
+        ```
+        # Mac/Linux
+        code /System/Volumes/Data/private/tmp/aws-auth-patch.yml
+        # Windows
+        code aws-auth-patch.yml
+        ```
+        Add the following group in the data → mapRoles section of this file. YAML is indentation-sensitive, therefore refer to the snapshot below for a correct indentation:
+        ```
+        mapRoles: |
+            - groups:
+            - system:masters
+            rolearn: arn:aws:iam::<ACCOUNT_ID>:role/UdacityFlaskDeployCBKubectlRole
+            username: build      
+        ```
 
-- Update: Update your cluster's configmap:
-    ```
-    # Mac/Linux
-    kubectl patch configmap/aws-auth -n kube-system --patch "$(cat /tmp/aws-auth-patch.yml)"
+    - Update: Update your cluster's configmap:
+        ```
+        # Mac/Linux
+        kubectl patch configmap/aws-auth -n kube-system --patch "$(cat /tmp/aws-auth-patch.yml)"
 
-    # Windows
-    kubectl patch configmap/aws-auth -n kube-system --patch "$(cat aws-auth-patch.yml)"
-    ```
-    The command above must show you `configmap/aws-auth patched` as a response.
+        # Windows
+        kubectl patch configmap/aws-auth -n kube-system --patch "$(cat aws-auth-patch.yml)"
+        ```
+        The command above must show you `configmap/aws-auth patched` as a response.
 
 ### Deployment to Kubernetes using CodePipeline and CodeBuild
 
