@@ -1,7 +1,7 @@
-# Creating a CI/CD pipeline with AWS Code Build and Code Pipeline
+# Deploying a Flask App to Kubernetes with a CI/CD pipeline
 
 ## Overview
-I containerized a Flask App using Docker and deployed the App to a Kubernetes cluster with a CI/CD pipeline using Cloudformation, Codebuild and CodePipeline. I associated the pipeline's one end to the Github repository (containing the application code), and connected the other end to the EKS cluster. Below is the architecture diagram of the deployed App with four main actions.
+I containerized a Flask App using Docker and deployed the App to a Kubernetes cluster with a CI/CD pipeline. I associated the pipeline's one end to the Github repository (containing the application code), and connected the other end to the EKS cluster. Below is the architecture diagram of the deployed App with four main actions:
 ![](architecture.png)
 1. Code check-in - The application code for the Flask app is hosted on Github. Multiple contributors can contribute to the repository collaboratively. 
 
@@ -29,7 +29,7 @@ The app relies on a secret set as the environment variable `JWT_SECRET` to produ
 - AWS, EKSCTL and KUBECTL CLI
 
 ## Project Steps
-### 1. Run the API Locally using the Flask Server
+### Run the API Locally using the Flask Server
 - Install python dependencies: These dependencies are kept in a `requirements.txt` file in the root directory of the repository. To install them, go to the project directory and run the command `pip install -r requirements.txt`.
 
 - Set up the environment: You do not need to create an `.env` file to run locally but you do need two variables available in your terminal environment:
@@ -189,5 +189,131 @@ To try the /auth endpoint, use the following command, replacing email/password a
     ```
     The command above must show you `configmap/aws-auth patched` as a response.
 
+### Deployment to Kubernetes using CodePipeline and CodeBuild
+
+1. Generate a Github access token: A Github access token will allow CodePipeline to monitor when a repo is changed. A token can be generated [here](https://github.com/settings/tokens/). You should generate the token with full control of repositories. Be sure to save the token somewhere that is secure.
+
+    Once you create a personal access token, you can share this with any service (such as AWS CodeBuild, or AWS CLI) to allow accessing the repositories under your Github account.
+2. Create a pipeline using CloudFormation template
+
+    Modify the template
+    There is a file named ci-cd-codepipeline.cfn.yml provided in your starter repo. This is the template file that you will use to create your CodePipeline pipeline and CodeBuild project Open this file, and go to the 'Parameters' section. These are parameters that will accept values when you create a stack. Fill in the value for the following parameters:
+
+Parameter 	Field 	Possible Value
+EksClusterName 	Default 	simple-jwt-api
+Name of the EKS cluster you created
+GitSourceRepo 	Default 	FSND-Deploy-Flask-App-to-Kubernetes-Using-EKS
+Github repo name
+GitBranch 	Default 	master
+Or any other you want to link to the Pipeline
+GitHubUser 	Default 	Your Github username
+KubectlRoleName 	Default 	UdacityFlaskDeployCBKubectlRole
+We created this role earlier
+
+         Did you notice that we haven't saved the GitHubToken in this file? Do not use any quotes in your values, as shown in the snapshot below. Save the changes you've made.
+
+Adding a Default field in the EksClusterName parameter
+
+    Review the resources
+    Review the resources that will be created using this ci-cd-codepipeline.cfn.yml file.
+
+Resources that will be created using the ci-cd-codepipeline.cfn.yml template
+
+    Create Stack
+    Use the AWS web-console to create a stack for CodePipeline using the CloudFormation template file ci-cd-codepipeline.cfn.yml. Go to the CloudFormation service in the AWS console. Press the Create Stack button. It will make you go through the following three steps -
+
+        Step 1 - Specify template - Choose the options "Template is ready" and "Upload a template file" to upload the template file ci-cd-codepipeline.cfn.yml. Click the 'Next' button.
+
+        Step 2 - Specify stack details - Give the stack a name, fill in your GitHub login, and the Github access token generated in the previous step. Make sure that the cluster name matches the one you have created, and the 'kubectl IAM role' matches the role you created above, and the repository matches the name of your forked repo.
+
+        Step 3 - Configure stack options - Leave default, and create the stack.
+
+        Troubleshoot: If there is an indentation error in your YAML template file, the CloudFormation will raise a "Template format error". In such a case, you will have to identify the line of error in the template, using any external tools, such as - YAML Validator or YAML Lint.
+
+    You can check its status in the CloudFormation console. It will take some time (5-15 mins) to create the stack. After the successful creation of the stack, you can see the CodeBuild project and CodePipeline instance get automatically created for you. In addition, the Cloudformation template will create a few more resources, such as an S3 bucket, a Lambda function, and others.
+
+Create stack - Step 1 - Specify template
+
+Create stack - Step 2 - Specify stack details
+
+Final stack in the CloudFormation console
+3. Set a Secret using AWS Parameter Store
+
+We need a way to pass your JWT secret to the app in kubernetes securly. You will be using AWS Parameter Store to do this.
+
+    Add the following to the end of the buildspec.yml file (be careful about the indentation):
+
+    env:
+      parameter-store:         
+        JWT_SECRET: JWT_SECRET
+
+    This lets CodeBuild know to set an environment variable based on a value in the parameter-store. See a snapshot below:
+
+Add env section at the end of buildspec.yml
+
+    Put secret into AWS Parameter Store
+
+    aws ssm put-parameter --name JWT_SECRET --overwrite --value "YourJWTSecret" --type SecureString
+
+    Once you submit your project and receive the reviews, you can consider deleting the variable from parameter-store using:
+
+    aws ssm delete-parameter --name JWT_SECRET
+
+4. How the CodeBuild project will work?
+
+In the previous step, the CloudFormation template file, ci-cd-codepipeline.cfn.yml, will automatically create a CodeBuild project. By default, the build process depends on the buildspec.yml file.
+
+    buildspec.yml
+    The CodeBuild expects the build specification in a file named buildspec.yml (default name) to run a build. This file must be placed in the root of your source directory (Github repo). The buildspec.yml is a collection of build commands and related settings, in YAML format.
+
+        Note - In the buildspec.yml file, use the same (or closer) KUBECTL version as you've used while creating an EKS cluster (run kubectl version in your local terminal). To do so, uncomment and replace this line in the buildspec.yml with a specific version of your choice. Refer to the Install kubectl on Linux worker nodes for the available versions. (Mind the region in your URL too).
+
+    Details of the buildspec.yml
+    The buildspec.yml file specifies the different phases of a build, such as an install, pre-build, build, and post-build. Each phase has a set of commands to be automatically executed by CodeBuild. When you trigger a build in the CodeBuild, you can see each command being executed in the CodeBuild log console.
+
+Build phases defined in the buildspec.yml
+
+    Trigger
+    Start the build process by clicking on the “Start build” button in the CodeBuild dashboard.
+
+Snapshot to show the “Start build” button in CodeBuild
+
+Snapshot to show the build in progress
+5. Troubleshoot - How to debug a failed build?
+6. The Working Project
+
+Once the stack is successfully created, try the steps below:
+
+    Push a commit - To check if the pipeline works, commit a change to the master branch of your Github repo, as:
+
+    # Verify the remote destination. 
+    # It should point to the repo in your account (not the repo in the Udacity account). 
+    git remote -v
+    # Otherwise, FORK the Udacity repo, and then clone it locally
+    # Make the changes locally
+    # git status
+    # Add the changes to the Git staging area
+    git add . --all
+    # You can select specific files to be added to the staging area as
+    git add <filename>
+    # Provide a meaningful description of the changes you have added to the staging area
+    git commit -m “my comment“
+    # Push to the local master branch to the remote master branch
+    git push
+
+    Verify - In the AWS console go to the CodePipeline dashboard. You should see that the build is running.
+
+    Test your Endpoint - To test your API endpoints, get the external IP for your service:
+
+    kubectl get services simple-jwt-api -o wide
+
+    Now use the external IP url to test the app:
+
+    export TOKEN=`curl -d '{"email":"<EMAIL>","password":"<PASSWORD>"}' -H "Content-Type: application/json" -X POST <EXTERNAL-IP URL>/auth  | jq -r '.token'`
+    curl --request GET '<EXTERNAL-IP URL>/contents' -H "Authorization: Bearer ${TOKEN}" | jq 
+
+    Save the external IP from above to provide to the reviewer when you will submit your project. Go to the next page for details about the project submission process.
+
+Concept Checklist
 
 
