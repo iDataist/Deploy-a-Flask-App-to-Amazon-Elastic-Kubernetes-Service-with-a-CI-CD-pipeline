@@ -26,6 +26,7 @@ The app relies on a secret set as the environment variable `JWT_SECRET` to produ
     - For Mac users, if you have no previous Docker Toolbox installation, you can install Docker Desktop for Mac. If you already have a Docker Toolbox installation, please read [this](https://docs.docker.com/docker-for-mac/docker-toolbox/) before installing.
  - AWS Account
      - You can create an AWS account by signing up [here](https://aws.amazon.com/#).
+- AWS, EKSCTL and KUBECTL CLI
 
 ## Project Steps
 ### 1. Run the API Locally using the Flask Server
@@ -97,3 +98,96 @@ To try the /auth endpoint, use the following command, replacing email/password a
     # Decrypt the token and returns its content
     curl --request GET 'http://localhost:80/contents' -H "Authorization: Bearer ${TOKEN}" | jq .
     ```
+### Create an EKS Cluster and IAM Role
+1. Create an EKS (Kubernetes) Cluster
+    - Create an EKS cluster named “simple-jwt-api” in a region of your choice:
+        ```
+        # Create cluster in the default region
+        eksctl create cluster --name simple-jwt-api
+        # Create a cluster in a specific region, such as us-east-2
+        eksctl create cluster --name simple-jwt-api --region=us-east-2
+        ```
+    - Verify: You can go to the CloudFormation or EKS web-console to view the progress. If you don’t see any progress, be sure that you are viewing clusters in the same region that they are being created. Once the status is CREATE_COMPLETE in your command line, check the health of your clusters nodes `kubectl get nodes`.
+
+    - Delete by running `eksctl delete cluster simple-jwt-api  --region=<REGION>`
+
+2. Create an IAM Role
+    - Get your AWS account id by running `aws sts get-caller-identity --query Account --output text`. 
+
+    - Create a trust relationship. To do this, create a blank trust.json file, add the following content to it and replace the <ACCOUNT_ID> with your actual account Id. This policy file defines the actions allowed by whosoever assumes the new Role.
+        ```
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "AWS": "arn:aws:iam::<ACCOUNT_ID>:root"
+                    },
+                    "Action": "sts:AssumeRole"
+                }
+            ]
+        }
+        ```
+    - Create a role, 'FlaskDeployCBKubectlRole', using the trust.json trust relationship:
+        ```
+        aws iam create-role --role-name FlaskDeployCBKubectlRole --assume-role-policy-document file://trust.json --output text --query 'Role.Arn'
+        ```
+    - Create a policy document, `iam-role-policy.json`, that allows (whosoever assumes the role) to perform specific actions (permissions) - "eks:Describe*" and "ssm:GetParameters" as:
+        ```
+        {
+            "Version": "2012-10-17",
+            "Statement":[{
+                "Effect": "Allow",
+                "Action": ["eks:Describe*", "ssm:GetParameters"],
+                "Resource":"*"
+            }]
+        }
+        ```
+    - Attach the iam-role-policy.json policy to the 'FlaskDeployCBKubectlRole' by running:
+        ```
+        aws iam put-role-policy --role-name FlaskDeployCBKubectlRole --policy-name eks-describe --policy-document file://iam-role-policy.json
+        ```
+    - Verify the newly created role in the IAM service
+3. Allowing the new role access to the cluster: Before you assign the new-role to the CodeBuild service (so that CodeBuild can also administer the cluster) you will have to add an entry of this new role into the 'aws-auth ConfigMap'. The aws-auth ConfigMap is used to grant role-based access control to your cluster. When your cluster is first created, the user who created it is given sole permission to administer it. Therefore, to grant any AWS service/user who will assume this role the ability to interact with your cluster, you must edit the 'aws-auth ConfigMap' within Kubernetes.
+
+- Fetch: Get the current configmap and save it to a file:
+    ```
+    # Mac/Linux
+    # The file will be created at `/System/Volumes/Data/private/tmp/aws-auth-patch.yml` path
+
+    kubectl get -n kube-system configmap/aws-auth -o yaml > /tmp/aws-auth-patch.yml
+
+    # Windows 
+    # The file will be created in the current working directory
+
+    kubectl get -n kube-system configmap/aws-auth -o yaml > aws-auth-patch.yml
+    ```
+- Edit: Open the aws-auth-patch.yml file using any editor, such as VS code editor:
+    ```
+    # Mac/Linux
+    code /System/Volumes/Data/private/tmp/aws-auth-patch.yml
+    # Windows
+    code aws-auth-patch.yml
+    ```
+    Add the following group in the data → mapRoles section of this file. YAML is indentation-sensitive, therefore refer to the snapshot below for a correct indentation:
+    ```
+    mapRoles: |
+        - groups:
+        - system:masters
+        rolearn: arn:aws:iam::<ACCOUNT_ID>:role/UdacityFlaskDeployCBKubectlRole
+        username: build      
+    ```
+
+- Update: Update your cluster's configmap:
+    ```
+    # Mac/Linux
+    kubectl patch configmap/aws-auth -n kube-system --patch "$(cat /tmp/aws-auth-patch.yml)"
+
+    # Windows
+    kubectl patch configmap/aws-auth -n kube-system --patch "$(cat aws-auth-patch.yml)"
+    ```
+    The command above must show you `configmap/aws-auth patched` as a response.
+
+
+
