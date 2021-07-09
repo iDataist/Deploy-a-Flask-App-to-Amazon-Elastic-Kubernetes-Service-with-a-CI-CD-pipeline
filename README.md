@@ -196,41 +196,28 @@ To try the /auth endpoint, use the following command, replacing email/password a
     Once you create a personal access token, you can share this with any service (such as AWS CodeBuild, or AWS CLI) to allow accessing the repositories under your Github account.
 2. Create a pipeline using CloudFormation template
 
-    Modify the template
-    There is a file named ci-cd-codepipeline.cfn.yml provided in your starter repo. This is the template file that you will use to create your CodePipeline pipeline and CodeBuild project Open this file, and go to the 'Parameters' section. These are parameters that will accept values when you create a stack. Fill in the value for the following parameters:
+    - Modify the template: open `ci-cd-codepipeline.cfn.yml` and go to the 'Parameters' section. These are parameters that will accept values when you create a stack. Fill in the value for the following parameters:
 
-Parameter 	Field 	Possible Value
-EksClusterName 	Default 	simple-jwt-api
-Name of the EKS cluster you created
-GitSourceRepo 	Default 	FSND-Deploy-Flask-App-to-Kubernetes-Using-EKS
-Github repo name
-GitBranch 	Default 	master
-Or any other you want to link to the Pipeline
-GitHubUser 	Default 	Your Github username
-KubectlRoleName 	Default 	UdacityFlaskDeployCBKubectlRole
-We created this role earlier
+        | Parameter       	| Field   	| Possible Value                                            	|
+        |-----------------	|---------	|-----------------------------------------------------------	|
+        | EksClusterName  	| Default 	| simple-jwt-api                                            	|
+        | GitSourceRepo   	| Default 	| Deploying-a-Flask-App-to-Kubernetes-with-a-CI-CD-pipeline 	|
+        | GitBranch       	| Default 	| main                                                      	|
+        | GitHubUser      	| Default 	| Your Github username                                      	|
+        | KubectlRoleName 	| Default 	| FlaskDeployCBKubectlRole                                  	|
 
-         Did you notice that we haven't saved the GitHubToken in this file? Do not use any quotes in your values, as shown in the snapshot below. Save the changes you've made.
+    - Create Stack
+    Use the AWS web-console to create a stack for CodePipeline using the CloudFormation template file `ci-cd-codepipeline.cfn.yml`. Go to the CloudFormation service in the AWS console. Press the Create Stack button. It will make you go through the following three steps:
 
-Adding a Default field in the EksClusterName parameter
+        Step 1. Specify template - Choose the options "Template is ready" and "Upload a template file" to upload the template file ci-cd-codepipeline.cfn.yml. Click the 'Next' button.
 
-    Review the resources
-    Review the resources that will be created using this ci-cd-codepipeline.cfn.yml file.
+        Step 2. Specify stack details - Give the stack a name, fill in your GitHub login, and the Github access token generated in the previous step. Make sure that the cluster name matches the one you have created, and the 'kubectl IAM role' matches the role you created above, and the repository matches the name of your forked repo.
 
-Resources that will be created using the ci-cd-codepipeline.cfn.yml template
-
-    Create Stack
-    Use the AWS web-console to create a stack for CodePipeline using the CloudFormation template file ci-cd-codepipeline.cfn.yml. Go to the CloudFormation service in the AWS console. Press the Create Stack button. It will make you go through the following three steps -
-
-        Step 1 - Specify template - Choose the options "Template is ready" and "Upload a template file" to upload the template file ci-cd-codepipeline.cfn.yml. Click the 'Next' button.
-
-        Step 2 - Specify stack details - Give the stack a name, fill in your GitHub login, and the Github access token generated in the previous step. Make sure that the cluster name matches the one you have created, and the 'kubectl IAM role' matches the role you created above, and the repository matches the name of your forked repo.
-
-        Step 3 - Configure stack options - Leave default, and create the stack.
+        Step 3. Configure stack options - Leave default, and create the stack.
 
         Troubleshoot: If there is an indentation error in your YAML template file, the CloudFormation will raise a "Template format error". In such a case, you will have to identify the line of error in the template, using any external tools, such as - YAML Validator or YAML Lint.
 
-    You can check its status in the CloudFormation console. It will take some time (5-15 mins) to create the stack. After the successful creation of the stack, you can see the CodeBuild project and CodePipeline instance get automatically created for you. In addition, the Cloudformation template will create a few more resources, such as an S3 bucket, a Lambda function, and others.
+        You can check its status in the CloudFormation console. It will take some time (5-15 mins) to create the stack. After the successful creation of the stack, you can see the CodeBuild project and CodePipeline instance get automatically created for you. In addition, the Cloudformation template will create a few more resources, such as an S3 bucket, a Lambda function, and others.
 
 Create stack - Step 1 - Specify template
 
