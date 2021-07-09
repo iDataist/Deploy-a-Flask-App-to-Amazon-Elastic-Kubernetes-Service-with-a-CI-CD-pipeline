@@ -11,10 +11,8 @@ import jwt
 # pylint: disable=import-error
 from flask import Flask, jsonify, request, abort
 
-
 JWT_SECRET = os.environ.get('JWT_SECRET', 'abc123abc1234')
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
-
 
 def _logger():
     '''
@@ -32,7 +30,6 @@ def _logger():
 
     log.addHandler(stream_handler)
     return log
-
 
 LOG = _logger()
 LOG.debug("Starting with log level: %s" % LOG_LEVEL )
@@ -56,11 +53,16 @@ def require_jwt(function):
         return function(*args, **kws)
     return decorated_function
 
+def _get_jwt(user_data):
+    exp_time = datetime.datetime.utcnow() + datetime.timedelta(weeks=2)
+    payload = {'exp': exp_time,
+               'nbf': datetime.datetime.utcnow(),
+               'email': user_data['email']}
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 @APP.route('/', methods=['POST', 'GET'])
 def health():
     return jsonify("Healthy")
-
 
 @APP.route('/auth', methods=['POST'])
 def auth():
@@ -82,7 +84,6 @@ def auth():
 
     return jsonify(token=_get_jwt(user_data).decode('utf-8'))
 
-
 @APP.route('/contents', methods=['GET'])
 def decode_jwt():
     """
@@ -97,19 +98,10 @@ def decode_jwt():
     except: # pylint: disable=bare-except
         abort(401)
 
-
     response = {'email': data['email'],
                 'exp': data['exp'],
                 'nbf': data['nbf'] }
     return jsonify(**response)
-
-
-def _get_jwt(user_data):
-    exp_time = datetime.datetime.utcnow() + datetime.timedelta(weeks=2)
-    payload = {'exp': exp_time,
-               'nbf': datetime.datetime.utcnow(),
-               'email': user_data['email']}
-    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 if __name__ == '__main__':
     APP.run(host='127.0.0.1', port=8080, debug=True)
