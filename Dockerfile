@@ -14,4 +14,4 @@ RUN pip install --upgrade pip &&\
 EXPOSE 80
 
 # Run app.py at container launch
-CMD ["gunicorn", "-b", ":8080", "main:APP"]
+ENTRYPOINT ["gunicorn", "-b", ":8080", "main:APP"]
