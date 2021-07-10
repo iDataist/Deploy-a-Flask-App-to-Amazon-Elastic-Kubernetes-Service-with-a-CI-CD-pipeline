@@ -175,7 +175,7 @@ To try the /auth endpoint, use the following command, replacing email/password a
         mapRoles: |
             - groups:
             - system:masters
-            rolearn: arn:aws:iam::<ACCOUNT_ID>:role/UdacityFlaskDeployCBKubectlRole
+            rolearn: arn:aws:iam::<ACCOUNT_ID>:role/FlaskDeployCBKubectlRole
             username: build      
         ```
 
