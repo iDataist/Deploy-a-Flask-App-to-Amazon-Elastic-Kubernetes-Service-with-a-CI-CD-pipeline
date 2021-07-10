@@ -112,7 +112,7 @@ To try the /auth endpoint, use the following command, replacing email/password a
     - Delete by running `eksctl delete cluster simple-jwt-api  --region=<REGION>`
 
 2. Create an IAM Role
-    - Get your AWS account id by running `aws sts get-caller-identity --query Account --output text`. 
+    - Get your AWS account id by running `aws sts get-caller-identity --query Account --output text`.
 
     - Create a trust relationship. To do this, create a blank trust.json file, add the following content to it and replace the <ACCOUNT_ID> with your actual account Id. This policy file defines the actions allowed by whosoever assumes the new Role.
         ```
