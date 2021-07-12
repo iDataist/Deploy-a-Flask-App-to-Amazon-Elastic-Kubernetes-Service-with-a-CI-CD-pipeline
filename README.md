@@ -1,4 +1,4 @@
-# Deploying a Flask App to Kubernetes with a CI/CD pipeline
+# Deploying a Flask App to Amazon Elastic Kubernetes Service with a CI/CD pipeline
 
 ## Overview
 I containerized a Flask App using Docker and deployed the App to a Kubernetes cluster with a CI/CD pipeline. I associated the pipeline's one end to the Github repository (containing the application code), and connected the other end to the EKS cluster. Below is the architecture diagram of the deployed App with four main actions:
