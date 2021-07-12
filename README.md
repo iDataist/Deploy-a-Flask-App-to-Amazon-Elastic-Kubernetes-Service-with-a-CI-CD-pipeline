@@ -32,7 +32,7 @@ The app relies on a secret set as the environment variable `JWT_SECRET` to produ
 ### Run the API Locally using the Flask Server
 - Install python dependencies: These dependencies are kept in a `requirements.txt` file in the root directory of the repository. To install them, go to the project directory and run the command `pip install -r requirements.txt`.
 
-- Set up the environment: You do not need to create an `.env` file to run locally but you do need two variables available in your terminal environment:
+- Set up the environment: You do not need to create an `.env_file` file to run locally but you do need two variables available in your terminal environment:
     - JWT_SECRET - The secret used to make the JWT, for the purpose of this course the secret can be any string.
     - LOG_LEVEL - It represents the level of logging. It is optional to be set. It has a default value as 'INFO', but when debugging an app locally, you may want to set it to 'DEBUG'.
 
@@ -43,7 +43,7 @@ The app relies on a secret set as the environment variable `JWT_SECRET` to produ
     echo $JWT_SECRET
     echo $LOG_LEVEL
     ```
-- Run the app: Run the app using the Flask server, from the root directory of the downloaded repository, run `python main.py`.Open http://127.0.0.1:8080/ in a new browser OR run curl --request GET http://localhost:8080/ on the command-line terminal. It will give you a response as "Healthy".
+- Run the app: Run the app using the Flask server, from the root directory of the downloaded repository, run `python main.py`. Open http://127.0.0.1:8080/ in a new browser OR run `curl --request GET http://localhost:8080/` on the command-line terminal. It will give you a response as "Healthy".
 
 - Install a command-line JSON processor: Before trying to access other endpoints of the app, we need the jq, a package that helps to pretty-print JSON outputs. In simple words, the JQ package helps you parse, filter, or modify JSON outputs. Open a new terminal window, and run the command below. For Linux, run `sudo apt-get install jq`. For Mac, run `brew install jq`. For Windows, run `chocolatey install jq`.
 
